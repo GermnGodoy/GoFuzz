@@ -33,9 +33,9 @@ func makeConnection(url string) (status, charas, lines int){
 		log.Fatalln(err)
 	}
 
-	charas = len(body)
-
 	bod := string(body)
+
+	charas = len(bod)
 
 	lines = strings.Count(bod, "\n")
 	lines = lines + 1
