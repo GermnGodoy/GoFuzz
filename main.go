@@ -7,6 +7,7 @@ import (
 	"log"
 	"io/ioutil"
 	"strings"
+	"os"
 )
 
 
@@ -25,7 +26,7 @@ var White  = "\033[97m"
 
 func makeConnection(url string, redirect bool) (status, charas, lines int, finalurl string){
 
-	fmt.Printf("%s[*]%s Starting the petiton to %s", Yellow, Reset, url)
+	fmt.Printf("%s[*]%s Starting the petiton to %s%s%s", Yellow, Reset,Purple, url,Purple)
 
 	client := &http.Client{}
 
@@ -67,15 +68,41 @@ func makeConnection(url string, redirect bool) (status, charas, lines int, final
 }
 
 
+func clean(url, dict string) (xurl, xdict string){
+
+	xurl = strings.ReplaceAll(url, "GO", "")
+
+	return xurl, xdict
+}
+
+
 func main(){
 
 	url := flag.String("url", "https://en.wikipedia.org/wiki/%22Hello,_World!%22_program", "The url you want to do the attack to :)")
 
 	redirect := flag.Bool("redirect", false, "This will tell the fuzzing to follow redirects")
 
+	dict := flag.String("dict", "nodict", "The dictionary with the payloads that you want to use in your attack")
+
 	flag.Parse()
 
-	status, charas, lines, finalurl := makeConnection(*url, *redirect)
+	if *dict == "nodict"{
+		fmt.Printf("%s[!]%s There are no payloads for attacking", Red, Reset)
+		fmt.Println()
+		fmt.Printf("%s[!] %s", Red, Reset)
+		os.Exit(1)
+	}
+
+	if !strings.Contains(*url, "GO") {
+		fmt.Printf("%s[!]%s You must specify where to substitude with the word GO", Red,Reset)
+		fmt.Println()
+		fmt.Printf("%s[!] %s", Red, Reset)
+		os.Exit(1)
+	}
+
+	xurl, payloads := clean(*dict, *url)
+
+	status, charas, lines, finalurl := makeConnection(xurl, *redirect)
 
 	fmt.Println()
 
