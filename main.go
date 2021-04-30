@@ -72,7 +72,27 @@ func clean(url, dict string) (xurl, xdict string){
 
 	xurl = strings.ReplaceAll(url, "GO", "")
 
-	return xurl, xdict
+	xdict = dict
+
+	return xdict, xurl
+}
+
+func PrintInfo(status, charas, lines int, finalurl string) {
+	//fmt.Printf("%s[*]%s PETITION INFORMATION\n  -Status: %d %s\n  -Characters: %d\n  -Lines: %d  -URL: %s",Blue, Reset, status, http.StatusText(status), charas, lines, finalurl)
+	var statusColor = Yellow
+
+	if status > 199 && status < 300 {
+		statusColor = Green
+	} else if status > 299 && status < 400{
+		statusColor = Blue
+	} else if status > 399 && status < 500{
+		statusColor = Red
+	}
+
+	fmt.Printf("       %s%d%s%s        %dW         %dL      %s%s%s", statusColor,
+	 status, http.StatusText(status), Reset, charas, lines, Blue, finalurl,Reset)
+
+
 }
 
 
@@ -102,11 +122,25 @@ func main(){
 
 	xurl, payloads := clean(*dict, *url)
 
-	status, charas, lines, finalurl := makeConnection(xurl, *redirect)
+	fmt.Printf("%s[*] %sThe payloads are %s",Yellow, Reset, payloads)
 
 	fmt.Println()
 
-	fmt.Printf("%s[*]%s PETITION INFORMATION\n  -Status: %d %s\n  -Characters: %d\n  -Lines: %d  -URL: %s",Yellow, Reset, status, http.StatusText(status), charas, lines, finalurl)
+	fmt.Printf("%s[*] %sThe url is %s", Yellow, Reset, xurl)
+
+	fmt.Println()
+
+	status, charas, lines, finalurl := makeConnection(xurl, *redirect)
+
+	fmt.Println()
+	
+	fmt.Printf("=======================================================================\n")
+
+	fmt.Printf("       STATUS       Characters     Lines     URL\n")
+
+	fmt.Printf("=======================================================================\n")
+
+	PrintInfo(status, charas, lines, finalurl)
 
 	fmt.Println()
 }
