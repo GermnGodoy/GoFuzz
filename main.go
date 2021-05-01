@@ -9,6 +9,7 @@ import (
 	"strings"
 	"os"
 	"bufio"
+//	"time"
 )
 
 
@@ -25,9 +26,9 @@ var White  = "\033[97m"
 
 
 
-func makeConnection(url string, redirect bool) (status, charas, lines int, finalurl string){
+func makeConnection(url string, redirect bool, c chan Info) {
 
-	fmt.Printf("%s[*]%s Starting the petiton to %s%s%s", Yellow, Reset,Purple, url,Purple)
+	//fmt.Printf("%s[*]%s Starting the petiton to %s%s%s", Yellow, Reset,Purple, url,Purple)
 
 	client := &http.Client{}
 
@@ -46,7 +47,7 @@ func makeConnection(url string, redirect bool) (status, charas, lines int, final
 		log.Fatalln(err)
 	}
 
-	status = resp.StatusCode
+	status := resp.StatusCode
 
 	//log.Printf("StatusCode: %d\nStatus Text: %s", status, http.StatusText(status))
 
@@ -58,14 +59,14 @@ func makeConnection(url string, redirect bool) (status, charas, lines int, final
 
 	bod := string(body)
 
-	charas = len(bod)
+	charas := len(bod)
 
-	lines = strings.Count(bod, "\n")
+	lines := strings.Count(bod, "\n")
 	lines = lines + 1
 
-	finalurl = resp.Request.URL.String()
+	finalurl := resp.Request.URL.String()
 
-	return status, charas, lines, finalurl
+	c <- Info{status, charas, lines, finalurl}
 }
 
 
@@ -87,9 +88,6 @@ func getWords(dict string) (words []string) {
 	words = make([]string, 0)
 
 	for s.Scan(){
-		fmt.Printf("One word is %s", s.Text())
-		fmt.Println()
-
 		words = append(words, s.Text())
 
 	}
@@ -111,21 +109,45 @@ func clean(url, word string) (xurl string){
 	return xurl
 }
 
-func PrintInfo(status, charas, lines int, finalurl string) {
+func printHeader () {
+	fmt.Println("=============================================================================")
+	fmt.Println("ID	STATUS		Charas		Lines		URL")
+	fmt.Println("=============================================================================")
+}
+
+
+func PrintInfo(ch chan Info, index, hc int) {
 	//fmt.Printf("%s[*]%s PETITION INFORMATION\n  -Status: %d %s\n  -Characters: %d\n  -Lines: %d  -URL: %s",Blue, Reset, status, http.StatusText(status), charas, lines, finalurl)
 	var statusColor = Yellow
 
-	if status > 199 && status < 300 {
+	c := <- ch
+
+	if c.status == hc {
+		return
+	}
+
+	if c.status > 199 && c.status < 300 {
 		statusColor = Green
-	} else if status > 299 && status < 400{
+	} else if c.status > 299 && c.status < 400{
 		statusColor = Blue
-	} else if status > 399 && status < 500{
+	} else if c.status > 399 && c.status < 500{
 		statusColor = Red
 	}
 
-	fmt.Printf("       %s%d%s%s        %dW         %dL      %s%s%s", statusColor,
-	 status, http.StatusText(status), Reset, charas, lines, Blue, finalurl,Reset)
+	var factor = ""
 
+	if c.status > 199 && c.status < 300 {
+		factor = "	"
+	} else if c.status == 301 {
+		fmt.Printf("%d	%s%d Moved%s%s	%dCh		%dL	%s%s%s", index, statusColor, c.status,factor, Reset, c.charas, c.lines, Blue, c.finalurl, Reset)
+		fmt.Println()
+		return
+	}
+
+	fmt.Printf("%d	%s%d %s%s%s	%dCh		%dL	%s%s%s", index, statusColor,
+	 c.status, http.StatusText(c.status), factor, Reset, c.charas, c.lines, Blue, c.finalurl,Reset)
+
+	fmt.Println()
 
 }
 
@@ -138,7 +160,11 @@ func main(){
 
 	dict := flag.String("dict", "nodict", "The dictionary with the payloads that you want to use in your attack")
 
+	hc := flag.Int("hc", 0, "This will hide the code that you want for not to show it on the screen")
+
 	flag.Parse()
+
+	c := make(chan Info)
 
 	if *dict == "nodict"{
 		fmt.Printf("%s[!]%s There are no payloads for attacking", Red, Reset)
@@ -154,45 +180,19 @@ func main(){
 		os.Exit(1)
 	}
 
-	//xurl := clean(*dict, *url)
-
-	//fmt.Printf("%s[*] %sThe payloads are %s",Yellow, Reset, payloads)
-
-	//fmt.Println()
-
-	//fmt.Printf("%s[*] %sThe url is %s", Yellow, Reset, xurl)
-
-	fmt.Println()
-
-	//status, charas, lines, finalurl := makeConnection(xurl, *redirect)
-
-	fmt.Println()
-	
-	fmt.Printf("=======================================================================\n")
-
-	fmt.Printf("       STATUS       Characters     Lines     URL\n")
-
-	fmt.Printf("=======================================================================\n")
-
 	//PrintInfo(status, charas, lines, finalurl)
-
-	fmt.Println()
 
 	words := getWords(*dict)
 
+	printHeader()
 
 	for index, word := range words {
 		//fmt.Println("Index: %d	Word: %s",index, word)
-
-		fmt.Printf("%d", index)
-
-		fmt.Println()
-
 		xurl := clean(*url, word)
 
-		status, charas, lines, finalurl := makeConnection(xurl, *redirect)
+		go makeConnection(xurl, *redirect, c)
 
-		PrintInfo(status, charas, lines, finalurl)
+		PrintInfo(c, index, *hc)
 	}
 
 	//fmt.Printf("The words are:")
@@ -200,3 +200,9 @@ func main(){
 	//fmt.Println()
 }
 
+type Info struct {
+	status int
+	charas int
+	lines int
+	finalurl string
+}
