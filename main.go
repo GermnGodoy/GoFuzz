@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"os"
+	"bufio"
 )
 
 
@@ -68,13 +69,46 @@ func makeConnection(url string, redirect bool) (status, charas, lines int, final
 }
 
 
-func clean(url, dict string) (xurl, xdict string){
+func getWords(dict string) (words []string) {
+	f, err := os.Open(dict)
 
-	xurl = strings.ReplaceAll(url, "GO", "")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	xdict = dict
+	defer func() {
+		if err = f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
-	return xdict, xurl
+	s := bufio.NewScanner(f)
+
+	words = make([]string, 0)
+
+	for s.Scan(){
+		fmt.Printf("One word is %s", s.Text())
+		fmt.Println()
+
+		words = append(words, s.Text())
+
+	}
+
+	err = s.Err()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return words
+
+}
+
+func clean(url, word string) (xurl string){
+
+	xurl = strings.ReplaceAll(url, "GO", word)
+
+	return xurl
 }
 
 func PrintInfo(status, charas, lines int, finalurl string) {
@@ -120,17 +154,17 @@ func main(){
 		os.Exit(1)
 	}
 
-	xurl, payloads := clean(*dict, *url)
+	//xurl := clean(*dict, *url)
 
-	fmt.Printf("%s[*] %sThe payloads are %s",Yellow, Reset, payloads)
+	//fmt.Printf("%s[*] %sThe payloads are %s",Yellow, Reset, payloads)
+
+	//fmt.Println()
+
+	//fmt.Printf("%s[*] %sThe url is %s", Yellow, Reset, xurl)
 
 	fmt.Println()
 
-	fmt.Printf("%s[*] %sThe url is %s", Yellow, Reset, xurl)
-
-	fmt.Println()
-
-	status, charas, lines, finalurl := makeConnection(xurl, *redirect)
+	//status, charas, lines, finalurl := makeConnection(xurl, *redirect)
 
 	fmt.Println()
 	
@@ -140,8 +174,29 @@ func main(){
 
 	fmt.Printf("=======================================================================\n")
 
-	PrintInfo(status, charas, lines, finalurl)
+	//PrintInfo(status, charas, lines, finalurl)
 
 	fmt.Println()
+
+	words := getWords(*dict)
+
+
+	for index, word := range words {
+		//fmt.Println("Index: %d	Word: %s",index, word)
+
+		fmt.Printf("%d", index)
+
+		fmt.Println()
+
+		xurl := clean(*url, word)
+
+		status, charas, lines, finalurl := makeConnection(xurl, *redirect)
+
+		PrintInfo(status, charas, lines, finalurl)
+	}
+
+	//fmt.Printf("The words are:")
+	//fmt.Printf(words[100])
+	//fmt.Println()
 }
 
